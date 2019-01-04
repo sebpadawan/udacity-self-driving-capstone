@@ -1,8 +1,9 @@
 
 class LowPassFilter(object):
     def __init__(self, tau, ts):
-        self.a = 1. / (tau / ts + 1.)
-        self.b = tau / ts / (tau / ts + 1.);
+        # First order low pass filter
+        self.a = 1. / (tau / ts + 1.) # Input contribution
+        self.b = tau / ts / (tau / ts + 1.); # Inertia contribution
 
         self.last_val = 0.
         self.ready = False
