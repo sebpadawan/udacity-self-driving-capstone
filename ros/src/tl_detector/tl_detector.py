@@ -12,8 +12,17 @@ import cv2
 import yaml
 from scipy.spatial import KDTree
 import numpy as np
+import os
+import glob
+import math
 
 STATE_COUNT_THRESHOLD = 3
+TRAINING_DATA_PATH = "/home/student/Desktop/CarND-capstone-repo/data/training_data/"
+TRAINING_DATA_COLLECT = True
+TRAINING_DATA_PURGE = True
+TRAINING_DATA_MAX_DISTANCE = 50
+TRAINING_DATA_NUMBER = 3000
+
 
 class TLDetector(object):
     def __init__(self):
@@ -51,6 +60,20 @@ class TLDetector(object):
         self.last_state = TrafficLight.UNKNOWN
         self.last_wp = -1
         self.state_count = 0
+        self.x_light = self.y_light = None
+
+        if TRAINING_DATA_COLLECT and TRAINING_DATA_PURGE:
+            rospy.loginfo("Purging training data")
+            path = TRAINING_DATA_PATH
+            self.path = path
+            files = glob.glob(path+'*.jpg')
+            for file in files:
+                os.remove(file)
+            self.data_count = 0
+        else:
+            files = glob.glob(path+'*.jpg')
+            self.data_count = len(files)
+
 
         rospy.spin()
 
@@ -126,7 +149,17 @@ class TLDetector(object):
             return False
 
         cv_image = self.bridge.imgmsg_to_cv2(self.camera_image, "bgr8")
+        small_image = cv2.resize(cv_image,(128,128))
+        state = light.state
 
+        if TRAINING_DATA_COLLECT and self.data_count < TRAINING_DATA_NUMBER:
+            distance = self.distance(self.x_light,self.y_light,self.pose.pose.position.x,self.pose.pose.position.y)
+            if distance > TRAINING_DATA_MAX_DISTANCE:
+                if np.random.rand() < 0.05:
+                    self.generate_training_data(small_image,TrafficLight.UNKNOWN)
+            else:
+                if np.random.rand() < 0.80:
+                    self.generate_training_data(small_image,light.state)
         #Get classification
         #return self.light_classifier.get_classification(cv_image)
         return light.state
@@ -162,13 +195,27 @@ class TLDetector(object):
                     line_wp_idx = temp_wp_idx
                     line_pose_x = line[0]
                     line_pose_y = line[1]
+                    self.x_light = line[0]
+                    self.y_light = line[1]
 
         if closest_light:
             state = self.get_light_state(closest_light)
-            rospy.loginfo("Current position {0},{1} - found light position {2},{3} with state  {4}".format(self.pose.pose.position.x,self.pose.pose.position.y, line_pose_x, line_pose_y, state))
+            #rospy.loginfo("Current position {0},{1} - found light position {2},{3} with state  {4}".format(self.pose.pose.position.x,self.pose.pose.position.y, line_pose_x, line_pose_y, state))
             return line_wp_idx, state
 
         return -1, TrafficLight.UNKNOWN
+
+
+    def generate_training_data(self, image, state):
+        name = self.path+str(self.data_count).zfill(5)+'.jpg'
+        cv2.imwrite(name,image)
+        rospy.loginfo(", {0},{1}".format(name,state))
+        self.data_count +=1
+
+    def distance(self,x1,y1,x2,y2):
+        return math.sqrt((x1-x2)**2+(y1-y2)**2)
+
+
 
 if __name__ == '__main__':
     try:
