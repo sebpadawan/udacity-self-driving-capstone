@@ -20,7 +20,7 @@ STATE_COUNT_THRESHOLD = 3
 TRAINING_DATA_PATH = "/home/student/Desktop/CarND-capstone-repo/data/training_data/"
 TRAINING_DATA_COLLECT = True
 TRAINING_DATA_PURGE = True
-TRAINING_DATA_MAX_DISTANCE = 50
+TRAINING_DATA_MAX_DISTANCE = 60
 TRAINING_DATA_NUMBER = 3000
 
 
@@ -155,7 +155,7 @@ class TLDetector(object):
         if TRAINING_DATA_COLLECT and self.data_count < TRAINING_DATA_NUMBER:
             distance = self.distance(self.x_light,self.y_light,self.pose.pose.position.x,self.pose.pose.position.y)
             if distance > TRAINING_DATA_MAX_DISTANCE:
-                if np.random.rand() < 0.05:
+                if np.random.rand() < 0.20:
                     self.generate_training_data(small_image,TrafficLight.UNKNOWN)
             else:
                 if np.random.rand() < 0.80:
